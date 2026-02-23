@@ -51,6 +51,7 @@ export default function App() {
   const [editingEmployee, setEditingEmployee] = useState<Partial<Employee> | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState<string | null>(null);
   const [formSection, setFormSection] = useState<'personal' | 'employment' | 'documents'>('personal');
 
   useEffect(() => {
@@ -98,8 +99,14 @@ export default function App() {
         fetchEmployees();
         fetchStats();
       } else {
-        const errData = await res.json();
-        alert('Gagal menyimpan: ' + (errData.error || 'Terjadi kesalahan'));
+        let errorMessage = 'Terjadi kesalahan';
+        try {
+          const errData = await res.json();
+          errorMessage = errData.error || errorMessage;
+        } catch (e) {
+          errorMessage = `Server Error (${res.status})`;
+        }
+        alert('Gagal menyimpan: ' + errorMessage);
       }
     } catch (err) {
       console.error('Failed to save employee', err);
@@ -113,6 +120,13 @@ export default function App() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Check file size (e.g., 5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Ukuran file terlalu besar. Maksimal 5MB.');
+      return;
+    }
+
+    setIsUploading(field);
     const formData = new FormData();
     formData.append('file', file);
 
@@ -121,12 +135,23 @@ export default function App() {
         method: 'POST',
         body: formData,
       });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Gagal mengunggah file');
+      }
+
       const data = await res.json();
       if (data.path) {
         setEditingEmployee(prev => ({ ...prev, [field]: data.path }));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Upload failed', err);
+      alert('Gagal mengunggah: ' + err.message);
+    } finally {
+      setIsUploading(null);
+      // Reset input value so the same file can be selected again if needed
+      e.target.value = '';
     }
   };
 
@@ -635,12 +660,21 @@ export default function App() {
                                   )}
                                 </div>
                               </div>
-                              <label className="cursor-pointer bg-white px-4 py-2 border border-zinc-200 rounded-lg text-xs font-bold text-zinc-600 hover:bg-zinc-50 transition-colors flex items-center gap-2">
-                                <Upload size={14} />
-                                {editingEmployee?.[doc.field as keyof Employee] ? 'Ganti' : 'Pilih File'}
+                              <label className={cn(
+                                "cursor-pointer bg-white px-4 py-2 border border-zinc-200 rounded-lg text-xs font-bold text-zinc-600 hover:bg-zinc-50 transition-colors flex items-center gap-2",
+                                isUploading === doc.field && "opacity-50 cursor-wait"
+                              )}>
+                                {isUploading === doc.field ? (
+                                  <div className="w-3 h-3 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
+                                ) : (
+                                  <Upload size={14} />
+                                )}
+                                {isUploading === doc.field ? 'Mengunggah...' : (editingEmployee?.[doc.field as keyof Employee] ? 'Ganti' : 'Pilih File')}
                                 <input 
                                   type="file" 
                                   className="hidden" 
+                                  accept=".pdf,image/*"
+                                  disabled={isUploading !== null}
                                   onChange={(e) => handleFileUpload(e, doc.field as keyof Employee)}
                                 />
                               </label>
