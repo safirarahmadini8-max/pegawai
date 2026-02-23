@@ -50,6 +50,7 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Partial<Employee> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [formSection, setFormSection] = useState<'personal' | 'employment' | 'documents'>('personal');
 
   useEffect(() => {
@@ -81,6 +82,7 @@ export default function App() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
     const method = editingEmployee?.id ? 'PUT' : 'POST';
     const url = editingEmployee?.id ? `/api/employees/${editingEmployee.id}` : '/api/employees';
 
@@ -95,9 +97,15 @@ export default function App() {
         setEditingEmployee(null);
         fetchEmployees();
         fetchStats();
+      } else {
+        const errData = await res.json();
+        alert('Gagal menyimpan: ' + (errData.error || 'Terjadi kesalahan'));
       }
     } catch (err) {
       console.error('Failed to save employee', err);
+      alert('Terjadi kesalahan koneksi');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -331,12 +339,19 @@ export default function App() {
                         className="hover:bg-zinc-50 transition-colors group"
                       >
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-600 font-bold text-sm">
+                          <div 
+                            className="flex items-center gap-3 cursor-pointer group/name"
+                            onClick={() => {
+                              setEditingEmployee(emp);
+                              setFormSection('personal');
+                              setIsModalOpen(true);
+                            }}
+                          >
+                            <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-600 font-bold text-sm group-hover/name:bg-emerald-100 group-hover/name:text-emerald-600 transition-colors">
                               {emp.name.charAt(0)}
                             </div>
                             <div>
-                              <p className="font-medium text-zinc-900">{emp.name}</p>
+                              <p className="font-medium text-zinc-900 group-hover/name:text-emerald-600 transition-colors">{emp.name}</p>
                               <p className="text-xs text-zinc-500">{emp.email}</p>
                             </div>
                           </div>
@@ -368,7 +383,7 @@ export default function App() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center justify-end gap-2">
                             <button 
                               onClick={() => {
                                 setEditingEmployee(emp);
@@ -376,12 +391,14 @@ export default function App() {
                                 setIsModalOpen(true);
                               }}
                               className="p-2 hover:bg-emerald-50 text-emerald-600 rounded-lg transition-colors"
+                              title="Edit Data"
                             >
                               <Edit2 size={16} />
                             </button>
                             <button 
                               onClick={() => handleDelete(emp.id)}
                               className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
+                              title="Hapus Data"
                             >
                               <Trash2 size={16} />
                             </button>
@@ -651,26 +668,39 @@ export default function App() {
                     )}
                   </div>
                   <div className="flex gap-4">
-                    {formSection !== 'documents' ? (
+                    {formSection !== 'documents' && (
                       <button 
                         type="button"
                         onClick={() => {
                           if (formSection === 'personal') setFormSection('employment');
                           if (formSection === 'employment') setFormSection('documents');
                         }}
-                        className="px-8 py-3 bg-zinc-900 text-white text-sm font-bold rounded-xl shadow-lg transition-all"
+                        className="px-8 py-3 bg-zinc-100 text-zinc-600 text-sm font-bold rounded-xl hover:bg-zinc-200 transition-all"
                       >
                         Selanjutnya
                       </button>
-                    ) : (
-                      <button 
-                        form="employeeForm"
-                        type="submit"
-                        className="px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-emerald-500/20 transition-all"
-                      >
-                        Simpan Data Pegawai
-                      </button>
                     )}
+                    <button 
+                      form="employeeForm"
+                      type="submit"
+                      disabled={isSaving}
+                      className={cn(
+                        "px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2",
+                        isSaving && "opacity-70 cursor-not-allowed"
+                      )}
+                    >
+                      {isSaving ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Menyimpan...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 size={18} />
+                          Simpan Data Pegawai
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>

@@ -109,27 +109,73 @@ async function startServer() {
 
   app.post("/api/employees", (req, res) => {
     const { nip, name, position, rank, unit, phone, email, address, status, ktp_path, sk_pangkat_path, sk_berkala_path, sk_jabatan_path } = req.body;
+    
+    if (!nip || !name) {
+      return res.status(400).json({ error: "NIP dan Nama wajib diisi" });
+    }
+
     try {
       const info = db.prepare(`
         INSERT INTO employees (nip, name, position, rank, unit, phone, email, address, status, ktp_path, sk_pangkat_path, sk_berkala_path, sk_jabatan_path)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(nip, name, position, rank, unit, phone, email, address, status || 'ASN', ktp_path, sk_pangkat_path, sk_berkala_path, sk_jabatan_path);
+      `).run(
+        nip, 
+        name, 
+        position || '', 
+        rank || '', 
+        unit || '', 
+        phone || '', 
+        email || '', 
+        address || '', 
+        status || 'ASN', 
+        ktp_path || null, 
+        sk_pangkat_path || null, 
+        sk_berkala_path || null, 
+        sk_jabatan_path || null
+      );
       res.status(201).json({ id: info.lastInsertRowid });
     } catch (err: any) {
+      console.error("Database Error:", err);
       res.status(400).json({ error: err.message });
     }
   });
 
   app.put("/api/employees/:id", (req, res) => {
     const { nip, name, position, rank, unit, phone, email, address, status, ktp_path, sk_pangkat_path, sk_berkala_path, sk_jabatan_path } = req.body;
+    
+    if (!nip || !name) {
+      return res.status(400).json({ error: "NIP dan Nama wajib diisi" });
+    }
+
     try {
-      db.prepare(`
+      const result = db.prepare(`
         UPDATE employees 
         SET nip = ?, name = ?, position = ?, rank = ?, unit = ?, phone = ?, email = ?, address = ?, status = ?, ktp_path = ?, sk_pangkat_path = ?, sk_berkala_path = ?, sk_jabatan_path = ?
         WHERE id = ?
-      `).run(nip, name, position, rank, unit, phone, email, address, status, ktp_path, sk_pangkat_path, sk_berkala_path, sk_jabatan_path, req.params.id);
-      res.json({ success: true });
+      `).run(
+        nip, 
+        name, 
+        position || '', 
+        rank || '', 
+        unit || '', 
+        phone || '', 
+        email || '', 
+        address || '', 
+        status || 'ASN', 
+        ktp_path || null, 
+        sk_pangkat_path || null, 
+        sk_berkala_path || null, 
+        sk_jabatan_path || null, 
+        req.params.id
+      );
+      
+      if (result.changes === 0) {
+        res.status(404).json({ error: "Pegawai tidak ditemukan" });
+      } else {
+        res.json({ success: true });
+      }
     } catch (err: any) {
+      console.error("Database Error:", err);
       res.status(400).json({ error: err.message });
     }
   });
