@@ -88,7 +88,7 @@ export default function App() {
     // Pastikan kita tahu apakah ini update atau create
     const isUpdate = !!editingEmployee?.id;
     const method = isUpdate ? 'PUT' : 'POST';
-    const url = isUpdate ? `/api/employees/${editingEmployee.id}/` : '/api/employees/';
+    const url = isUpdate ? `/api/employees/${editingEmployee.id}` : '/api/employees';
 
     // Bersihkan data sebelum dikirim
     const payload = { ...editingEmployee };
@@ -115,9 +115,17 @@ export default function App() {
         let errorMessage = 'Terjadi kesalahan';
         try {
           const errData = await res.json();
-          errorMessage = errData.error || errorMessage;
+          console.error('Server Error Data:', errData);
+          
+          if (errData.error) {
+            errorMessage = typeof errData.error === 'object' ? JSON.stringify(errData.error) : String(errData.error);
+          } else if (errData.message) {
+            errorMessage = typeof errData.message === 'object' ? JSON.stringify(errData.message) : String(errData.message);
+          } else {
+            errorMessage = JSON.stringify(errData);
+          }
         } catch (e) {
-          errorMessage = `Server Error (${res.status})`;
+          errorMessage = `Server Error (${res.status}): Tidak dapat membaca respon server`;
         }
         alert('Gagal menyimpan: ' + errorMessage);
       }

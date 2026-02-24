@@ -99,7 +99,7 @@ async function startServer() {
   });
 
   // API Routes
-  app.get(["/api/employees", "/api/employees/"], (req, res) => {
+  app.get("/api/employees", (req, res) => {
     try {
       const employees = db.prepare("SELECT * FROM employees ORDER BY name ASC").all();
       res.json(employees);
@@ -113,7 +113,7 @@ async function startServer() {
     res.json({ path: `/uploads/${req.file.filename}` });
   });
 
-  app.get(["/api/employees/:id", "/api/employees/:id/"], (req, res) => {
+  app.get("/api/employees/:id", (req, res) => {
     try {
       const employee = db.prepare("SELECT * FROM employees WHERE id = ?").get(Number(req.params.id));
       if (employee) {
@@ -126,7 +126,7 @@ async function startServer() {
     }
   });
 
-  app.post(["/api/employees", "/api/employees/"], (req, res) => {
+  app.post("/api/employees", (req, res) => {
     const { nip, name, position, rank, unit, phone, email, address, status, ktp_path, sk_pangkat_path, sk_berkala_path, sk_jabatan_path } = req.body;
     
     if (!nip || !name) {
@@ -154,12 +154,13 @@ async function startServer() {
       );
       res.status(201).json({ id: info.lastInsertRowid, success: true });
     } catch (err: any) {
-      console.error("Database Error:", err);
+      console.error("Database Error (POST):", err);
+      console.error("Request Body:", req.body);
       res.status(400).json({ error: err.message });
     }
   });
 
-  app.put(["/api/employees/:id", "/api/employees/:id/"], (req, res) => {
+  app.put("/api/employees/:id", (req, res) => {
     const { nip, name, position, rank, unit, phone, email, address, status, ktp_path, sk_pangkat_path, sk_berkala_path, sk_jabatan_path } = req.body;
     const id = Number(req.params.id);
     
@@ -195,12 +196,14 @@ async function startServer() {
         res.json({ success: true });
       }
     } catch (err: any) {
-      console.error("Database Error:", err);
+      console.error("Database Error (PUT):", err);
+      console.error("ID:", id);
+      console.error("Request Body:", req.body);
       res.status(400).json({ error: err.message });
     }
   });
 
-  app.delete(["/api/employees/:id", "/api/employees/:id/"], (req, res) => {
+  app.delete("/api/employees/:id", (req, res) => {
     try {
       db.prepare("DELETE FROM employees WHERE id = ?").run(Number(req.params.id));
       res.json({ success: true });
@@ -209,7 +212,7 @@ async function startServer() {
     }
   });
 
-  app.get(["/api/stats", "/api/stats/"], (req, res) => {
+  app.get("/api/stats", (req, res) => {
     try {
       const unitStats = db.prepare("SELECT unit as name, COUNT(*) as value FROM employees GROUP BY unit").all();
       const rankStats = db.prepare("SELECT rank as name, COUNT(*) as value FROM employees GROUP BY rank").all();
@@ -218,6 +221,11 @@ async function startServer() {
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
+  });
+
+  // Catch-all for unhandled API routes
+  app.all("/api/*", (req, res) => {
+    res.status(404).json({ error: `API Route ${req.method} ${req.url} not found` });
   });
 
   // Vite middleware for development
