@@ -92,10 +92,20 @@ async function startServer() {
   app.use(express.json());
   app.use("/uploads", express.static(uploadDir));
 
+  // Request Logger for Debugging
+  app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+  });
+
   // API Routes
-  app.get("/api/employees", (req, res) => {
-    const employees = db.prepare("SELECT * FROM employees ORDER BY name ASC").all();
-    res.json(employees);
+  app.get(["/api/employees", "/api/employees/"], (req, res) => {
+    try {
+      const employees = db.prepare("SELECT * FROM employees ORDER BY name ASC").all();
+      res.json(employees);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   app.post("/api/upload", upload.single("file"), (req, res) => {
@@ -103,16 +113,20 @@ async function startServer() {
     res.json({ path: `/uploads/${req.file.filename}` });
   });
 
-  app.get("/api/employees/:id", (req, res) => {
-    const employee = db.prepare("SELECT * FROM employees WHERE id = ?").get(req.params.id);
-    if (employee) {
-      res.json(employee);
-    } else {
-      res.status(404).json({ error: "Employee not found" });
+  app.get(["/api/employees/:id", "/api/employees/:id/"], (req, res) => {
+    try {
+      const employee = db.prepare("SELECT * FROM employees WHERE id = ?").get(Number(req.params.id));
+      if (employee) {
+        res.json(employee);
+      } else {
+        res.status(404).json({ error: "Pegawai tidak ditemukan" });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 
-  app.post("/api/employees", (req, res) => {
+  app.post(["/api/employees", "/api/employees/"], (req, res) => {
     const { nip, name, position, rank, unit, phone, email, address, status, ktp_path, sk_pangkat_path, sk_berkala_path, sk_jabatan_path } = req.body;
     
     if (!nip || !name) {
@@ -138,15 +152,16 @@ async function startServer() {
         sk_berkala_path || null, 
         sk_jabatan_path || null
       );
-      res.status(201).json({ id: info.lastInsertRowid });
+      res.status(201).json({ id: info.lastInsertRowid, success: true });
     } catch (err: any) {
       console.error("Database Error:", err);
       res.status(400).json({ error: err.message });
     }
   });
 
-  app.put("/api/employees/:id", (req, res) => {
+  app.put(["/api/employees/:id", "/api/employees/:id/"], (req, res) => {
     const { nip, name, position, rank, unit, phone, email, address, status, ktp_path, sk_pangkat_path, sk_berkala_path, sk_jabatan_path } = req.body;
+    const id = Number(req.params.id);
     
     if (!nip || !name) {
       return res.status(400).json({ error: "NIP dan Nama wajib diisi" });
@@ -171,11 +186,11 @@ async function startServer() {
         sk_pangkat_path || null, 
         sk_berkala_path || null, 
         sk_jabatan_path || null, 
-        req.params.id
+        id
       );
       
       if (result.changes === 0) {
-        res.status(404).json({ error: "Pegawai tidak ditemukan" });
+        res.status(404).json({ error: "Pegawai dengan ID tersebut tidak ditemukan" });
       } else {
         res.json({ success: true });
       }
@@ -185,16 +200,24 @@ async function startServer() {
     }
   });
 
-  app.delete("/api/employees/:id", (req, res) => {
-    db.prepare("DELETE FROM employees WHERE id = ?").run(req.params.id);
-    res.json({ success: true });
+  app.delete(["/api/employees/:id", "/api/employees/:id/"], (req, res) => {
+    try {
+      db.prepare("DELETE FROM employees WHERE id = ?").run(Number(req.params.id));
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
-  app.get("/api/stats", (req, res) => {
-    const unitStats = db.prepare("SELECT unit as name, COUNT(*) as value FROM employees GROUP BY unit").all();
-    const rankStats = db.prepare("SELECT rank as name, COUNT(*) as value FROM employees GROUP BY rank").all();
-    const total = db.prepare("SELECT COUNT(*) as count FROM employees").get() as { count: number };
-    res.json({ unitStats, rankStats, total: total.count });
+  app.get(["/api/stats", "/api/stats/"], (req, res) => {
+    try {
+      const unitStats = db.prepare("SELECT unit as name, COUNT(*) as value FROM employees GROUP BY unit").all();
+      const rankStats = db.prepare("SELECT rank as name, COUNT(*) as value FROM employees GROUP BY rank").all();
+      const total = db.prepare("SELECT COUNT(*) as count FROM employees").get() as { count: number };
+      res.json({ unitStats, rankStats, total: total.count });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // Vite middleware for development

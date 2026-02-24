@@ -84,15 +84,28 @@ export default function App() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    const method = editingEmployee?.id ? 'PUT' : 'POST';
-    const url = editingEmployee?.id ? `/api/employees/${editingEmployee.id}` : '/api/employees';
+    
+    // Pastikan kita tahu apakah ini update atau create
+    const isUpdate = !!editingEmployee?.id;
+    const method = isUpdate ? 'PUT' : 'POST';
+    const url = isUpdate ? `/api/employees/${editingEmployee.id}/` : '/api/employees/';
+
+    // Bersihkan data sebelum dikirim
+    const payload = { ...editingEmployee };
+    if (!isUpdate) delete payload.id;
+
+    console.log(`Saving employee via ${method} ${url}`, payload);
 
     try {
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editingEmployee),
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload),
       });
+      
       if (res.ok) {
         setIsModalOpen(false);
         setEditingEmployee(null);
@@ -110,7 +123,7 @@ export default function App() {
       }
     } catch (err) {
       console.error('Failed to save employee', err);
-      alert('Terjadi kesalahan koneksi');
+      alert('Terjadi kesalahan koneksi ke server');
     } finally {
       setIsSaving(false);
     }
