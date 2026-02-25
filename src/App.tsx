@@ -88,13 +88,15 @@ export default function App() {
     // Pastikan kita tahu apakah ini update atau create
     const isUpdate = !!editingEmployee?.id;
     const method = isUpdate ? 'PUT' : 'POST';
-    const url = isUpdate ? `/api/employees/${editingEmployee.id}` : '/api/employees';
+    // Gunakan URL absolut jika memungkinkan untuk menghindari masalah routing di beberapa environment
+    const baseUrl = window.location.origin;
+    const url = isUpdate ? `${baseUrl}/api/employees/${editingEmployee.id}` : `${baseUrl}/api/employees`;
 
     // Bersihkan data sebelum dikirim
     const payload = { ...editingEmployee };
     if (!isUpdate) delete payload.id;
 
-    console.log(`Saving employee via ${method} ${url}`, payload);
+    console.log(`Attempting to save via ${method} ${url}`, payload);
 
     try {
       const res = await fetch(url, {
@@ -105,6 +107,8 @@ export default function App() {
         },
         body: JSON.stringify(payload),
       });
+      
+      console.log(`Response status: ${res.status} ${res.statusText}`);
       
       if (res.ok) {
         setIsModalOpen(false);
