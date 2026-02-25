@@ -55,15 +55,44 @@ export default function App() {
   const [formSection, setFormSection] = useState<'personal' | 'employment' | 'documents'>('personal');
 
   useEffect(() => {
+    initLocalStorage();
     fetchEmployees();
-    fetchStats();
   }, []);
 
-  const fetchEmployees = async () => {
+  const initLocalStorage = () => {
+    const stored = localStorage.getItem('kesbangpol_employees');
+    if (!stored) {
+      const seedData = [
+        { id: 1, nip: '198501012010011001', name: 'Budi Santoso, S.Sos', position: 'Kepala Badan', rank: 'Pembina Utama Muda (IV/c)', unit: 'Pimpinan', phone: '08123456789', email: 'budi@example.com', status: 'ASN', address: 'Jl. Merdeka No. 1' },
+        { id: 2, nip: '198705122012012003', name: 'Siti Aminah, M.Si', position: 'Sekretaris', rank: 'Pembina (IV/a)', unit: 'Sekretariat', phone: '08123456780', email: 'siti@example.com', status: 'ASN', address: 'Jl. Melati No. 5' },
+      ];
+      localStorage.setItem('kesbangpol_employees', JSON.stringify(seedData));
+    }
+  };
+
+  const calculateStats = (data: Employee[]) => {
+    const unitMap: Record<string, number> = {};
+    const rankMap: Record<string, number> = {};
+    
+    data.forEach(emp => {
+      if (emp.unit) unitMap[emp.unit] = (unitMap[emp.unit] || 0) + 1;
+      if (emp.rank) rankMap[emp.rank] = (rankMap[emp.rank] || 0) + 1;
+    });
+
+    setStats({
+      total: data.length,
+      unitStats: Object.entries(unitMap).map(([name, value]) => ({ name, value })),
+      rankStats: Object.entries(rankMap).map(([name, value]) => ({ name, value }))
+    });
+  };
+
+  const fetchEmployees = () => {
+    setLoading(true);
     try {
-      const res = await fetch('/api/employees');
-      const data = await res.json();
+      const stored = localStorage.getItem('kesbangpol_employees');
+      const data = stored ? JSON.parse(stored) : [];
       setEmployees(data);
+      calculateStats(data);
     } catch (err) {
       console.error('Failed to fetch employees', err);
     } finally {
@@ -71,71 +100,42 @@ export default function App() {
     }
   };
 
-  const fetchStats = async () => {
-    try {
-      const res = await fetch('/api/stats');
-      const data = await res.json();
-      setStats(data);
-    } catch (err) {
-      console.error('Failed to fetch stats', err);
-    }
+  const fetchStats = () => {
+    // Stats are handled in fetchEmployees
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     
-    // Pastikan kita tahu apakah ini update atau create
-    const isUpdate = !!editingEmployee?.id;
-    const method = isUpdate ? 'PUT' : 'POST';
-    // Gunakan URL absolut jika memungkinkan untuk menghindari masalah routing di beberapa environment
-    const baseUrl = window.location.origin;
-    const url = isUpdate ? `${baseUrl}/api/employees/${editingEmployee.id}` : `${baseUrl}/api/employees`;
-
-    // Bersihkan data sebelum dikirim
-    const payload = { ...editingEmployee };
-    if (!isUpdate) delete payload.id;
-
-    console.log(`Attempting to save via ${method} ${url}`, payload);
-
     try {
-      const res = await fetch(url, {
-        method,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(payload),
-      });
+      const stored = localStorage.getItem('kesbangpol_employees');
+      let data: Employee[] = stored ? JSON.parse(stored) : [];
       
-      console.log(`Response status: ${res.status} ${res.statusText}`);
-      
-      if (res.ok) {
-        setIsModalOpen(false);
-        setEditingEmployee(null);
-        fetchEmployees();
-        fetchStats();
+      if (editingEmployee?.id) {
+        // Update
+        data = data.map(emp => emp.id === editingEmployee.id ? { ...emp, ...editingEmployee } as Employee : emp);
       } else {
-        let errorMessage = 'Terjadi kesalahan';
-        try {
-          const errData = await res.json();
-          console.error('Server Error Data:', errData);
-          
-          if (errData.error) {
-            errorMessage = typeof errData.error === 'object' ? JSON.stringify(errData.error) : String(errData.error);
-          } else if (errData.message) {
-            errorMessage = typeof errData.message === 'object' ? JSON.stringify(errData.message) : String(errData.message);
-          } else {
-            errorMessage = JSON.stringify(errData);
-          }
-        } catch (e) {
-          errorMessage = `Server Error (${res.status}): Tidak dapat membaca respon server`;
-        }
-        alert('Gagal menyimpan: ' + errorMessage);
+        // Create
+        const newEmployee = {
+          ...editingEmployee,
+          id: Date.now(),
+          created_at: new Date().toISOString()
+        } as Employee;
+        data.push(newEmployee);
       }
+
+      localStorage.setItem('kesbangpol_employees', JSON.stringify(data));
+      
+      // Delay for UX
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setIsModalOpen(false);
+      setEditingEmployee(null);
+      fetchEmployees();
     } catch (err) {
       console.error('Failed to save employee', err);
-      alert('Terjadi kesalahan koneksi ke server');
+      alert('Gagal menyimpan ke LocalStorage. Mungkin memori penuh.');
     } finally {
       setIsSaving(false);
     }
@@ -145,49 +145,37 @@ export default function App() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check file size (e.g., 5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Ukuran file terlalu besar. Maksimal 5MB.');
+    // LocalStorage size is limited, so we limit file size to 1MB
+    if (file.size > 1 * 1024 * 1024) {
+      alert('File terlalu besar untuk LocalStorage. Maksimal 1MB.');
       return;
     }
 
     setIsUploading(field);
-    const formData = new FormData();
-    formData.append('file', file);
-
+    
     try {
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Gagal mengunggah file');
-      }
-
-      const data = await res.json();
-      if (data.path) {
-        setEditingEmployee(prev => ({ ...prev, [field]: data.path }));
-      }
-    } catch (err: any) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setEditingEmployee(prev => prev ? { ...prev, [field]: base64String } : null);
+        setIsUploading(null);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
       console.error('Upload failed', err);
-      alert('Gagal mengunggah: ' + err.message);
-    } finally {
+      alert('Gagal memproses file');
       setIsUploading(null);
-      // Reset input value so the same file can be selected again if needed
-      e.target.value = '';
     }
   };
 
   const handleDelete = async (id: number) => {
     if (confirm('Apakah Anda yakin ingin menghapus data pegawai ini?')) {
       try {
-        const res = await fetch(`/api/employees/${id}`, { method: 'DELETE' });
-        if (res.ok) {
-          fetchEmployees();
-          fetchStats();
-        }
+        const stored = localStorage.getItem('kesbangpol_employees');
+        let data: Employee[] = stored ? JSON.parse(stored) : [];
+        data = data.filter(emp => emp.id !== id);
+        localStorage.setItem('kesbangpol_employees', JSON.stringify(data));
+        fetchEmployees();
       } catch (err) {
         console.error('Failed to delete employee', err);
       }
