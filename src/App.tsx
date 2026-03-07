@@ -419,13 +419,13 @@ export default function App() {
                             .map(emp => (
                               <tr key={emp.id} className="hover:bg-zinc-50 transition-colors">
                                 <td className="px-6 py-3">
-                                  <p className="text-sm font-medium text-zinc-900">{emp.name}</p>
+                                  <p className="text-sm font-medium text-zinc-900">{emp.name || 'Tanpa Nama'}</p>
                                 </td>
-                                <td className="px-6 py-3 text-xs text-zinc-500 font-mono">{emp.nip}</td>
-                                <td className="px-6 py-3 text-xs text-zinc-500">{emp.position}</td>
+                                <td className="px-6 py-3 text-xs text-zinc-500 font-mono">{emp.nip || '-'}</td>
+                                <td className="px-6 py-3 text-xs text-zinc-500">{emp.position || '-'}</td>
                                 <td className="px-6 py-3">
                                   <span className="px-2 py-0.5 bg-zinc-100 text-zinc-600 rounded text-[9px] font-bold uppercase">
-                                    {emp.unit}
+                                    {emp.unit || '-'}
                                   </span>
                                 </td>
                               </tr>
@@ -472,20 +472,20 @@ export default function App() {
                             }}
                           >
                             <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-600 font-bold text-sm group-hover/name:bg-emerald-100 group-hover/name:text-emerald-600 transition-colors">
-                              {emp.name.charAt(0)}
+                              {(emp.name || '?').charAt(0)}
                             </div>
                             <div>
-                              <p className="font-medium text-zinc-900 group-hover/name:text-emerald-600 transition-colors">{emp.name}</p>
-                              <p className="text-xs text-zinc-500">{emp.email}</p>
+                              <p className="font-medium text-zinc-900 group-hover/name:text-emerald-600 transition-colors">{emp.name || 'Tanpa Nama'}</p>
+                              <p className="text-xs text-zinc-500">{emp.email || '-'}</p>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-zinc-600 font-mono">{emp.nip}</td>
-                        <td className="px-6 py-4 text-sm text-zinc-600">{emp.position}</td>
-                        <td className="px-6 py-4 text-sm text-zinc-600">{emp.rank}</td>
+                        <td className="px-6 py-4 text-sm text-zinc-600 font-mono">{emp.nip || '-'}</td>
+                        <td className="px-6 py-4 text-sm text-zinc-600">{emp.position || '-'}</td>
+                        <td className="px-6 py-4 text-sm text-zinc-600">{emp.rank || '-'}</td>
                         <td className="px-6 py-4">
                           <span className="px-2 py-1 bg-zinc-100 text-zinc-600 rounded-md text-[10px] font-bold uppercase tracking-wider">
-                            {emp.unit}
+                            {emp.unit || '-'}
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -495,7 +495,7 @@ export default function App() {
                             emp.status === 'Calon PNS' ? "bg-blue-100 text-blue-700" :
                             emp.status?.includes('P3K') ? "bg-amber-100 text-amber-700" : "bg-zinc-100 text-zinc-600"
                           )}>
-                            {emp.status}
+                            {emp.status || '-'}
                           </span>
                         </td>
                         <td className="px-6 py-4">
