@@ -183,11 +183,16 @@ export default function App() {
     }
   };
 
-  const filteredEmployees = employees.filter(emp => 
-    emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.nip.includes(searchTerm) ||
-    emp.position.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredEmployees = employees.filter(emp => {
+    const name = emp.name || '';
+    const nip = emp.nip || '';
+    const position = emp.position || '';
+    const search = searchTerm.toLowerCase();
+    
+    return name.toLowerCase().includes(search) ||
+           nip.includes(searchTerm) ||
+           position.toLowerCase().includes(search);
+  });
 
   return (
     <div className="flex h-screen bg-zinc-50 overflow-hidden">
@@ -293,7 +298,7 @@ export default function App() {
                     </div>
                   </div>
                   <h3 className="text-zinc-500 text-sm font-medium">Total Bidang/Unit</h3>
-                  <p className="text-3xl font-bold mt-1">{stats?.unitStats.length || 0}</p>
+                  <p className="text-3xl font-bold mt-1">{stats?.unitStats?.length || 0}</p>
                 </div>
                 <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
                   <div className="flex items-center justify-between mb-4">
@@ -302,7 +307,7 @@ export default function App() {
                     </div>
                   </div>
                   <h3 className="text-zinc-500 text-sm font-medium">Jabatan Struktural</h3>
-                  <p className="text-3xl font-bold mt-1">{employees.filter(e => e.position.toLowerCase().includes('kepala') || e.position.toLowerCase().includes('kabid')).length}</p>
+                  <p className="text-3xl font-bold mt-1">{employees.filter(e => e.position && (e.position.toLowerCase().includes('kepala') || e.position.toLowerCase().includes('kabid'))).length}</p>
                 </div>
               </div>
 
