@@ -53,6 +53,7 @@ export default function App() {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState<string | null>(null);
   const [formSection, setFormSection] = useState<'personal' | 'employment' | 'documents'>('personal');
+  const [selectedFilter, setSelectedFilter] = useState<{ type: 'unit' | 'rank', value: string } | null>(null);
 
   useEffect(() => {
     initLocalStorage();
@@ -63,7 +64,7 @@ export default function App() {
     const stored = localStorage.getItem('kesbangpol_employees');
     if (!stored) {
       const seedData = [
-        { id: 1, nip: '198501012010011001', name: 'Budi Santoso, S.Sos', position: 'Kepala Badan', rank: 'Pembina Utama Muda (IV/c)', unit: 'Pimpinan', phone: '08123456789', email: 'budi@example.com', status: 'ASN', address: 'Jl. Merdeka No. 1' },
+        { id: 1, nip: '198501012010011001', name: 'Budi Santoso, S.Sos', position: 'Kepala Badan', rank: 'Pembina Utama Muda (IV/c)', unit: 'Sekretariat', phone: '08123456789', email: 'budi@example.com', status: 'ASN', address: 'Jl. Merdeka No. 1' },
         { id: 2, nip: '198705122012012003', name: 'Siti Aminah, M.Si', position: 'Sekretaris', rank: 'Pembina (IV/a)', unit: 'Sekretariat', phone: '08123456780', email: 'siti@example.com', status: 'ASN', address: 'Jl. Melati No. 5' },
       ];
       localStorage.setItem('kesbangpol_employees', JSON.stringify(seedData));
@@ -311,17 +312,31 @@ export default function App() {
                   <h3 className="font-semibold mb-6">Distribusi Pegawai per Bidang</h3>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={stats?.unitStats || []}>
+                      <BarChart 
+                        data={stats?.unitStats || []}
+                        onClick={(data) => {
+                          if (data && data.activeLabel) {
+                            setSelectedFilter({ type: 'unit', value: data.activeLabel });
+                          }
+                        }}
+                      >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
                         <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
                         <YAxis fontSize={12} tickLine={false} axisLine={false} />
                         <Tooltip 
+                          cursor={{ fill: '#f8fafc' }}
                           contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                         />
-                        <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} />
+                        <Bar 
+                          dataKey="value" 
+                          fill="#10b981" 
+                          radius={[4, 4, 0, 0]} 
+                          className="cursor-pointer"
+                        />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
+                  <p className="text-[10px] text-zinc-400 mt-4 text-center italic">Klik batang grafik untuk melihat daftar pegawai</p>
                 </div>
 
                 <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
@@ -337,6 +352,12 @@ export default function App() {
                           outerRadius={80}
                           paddingAngle={5}
                           dataKey="value"
+                          onClick={(data) => {
+                            if (data && data.name) {
+                              setSelectedFilter({ type: 'rank', value: data.name });
+                            }
+                          }}
+                          className="cursor-pointer"
                         >
                           {(stats?.rankStats || []).map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -348,8 +369,68 @@ export default function App() {
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
+                  <p className="text-[10px] text-zinc-400 mt-4 text-center italic">Klik warna grafik untuk melihat daftar pegawai</p>
                 </div>
               </div>
+
+              {/* Filtered List Section */}
+              <AnimatePresence>
+                {selectedFilter && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden"
+                  >
+                    <div className="p-6 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
+                      <div>
+                        <h3 className="font-bold text-zinc-900 flex items-center gap-2">
+                          Daftar Pegawai: <span className="text-emerald-600">{selectedFilter.value}</span>
+                        </h3>
+                        <p className="text-xs text-zinc-500 mt-1">
+                          Menampilkan {employees.filter(e => selectedFilter.type === 'unit' ? e.unit === selectedFilter.value : e.rank === selectedFilter.value).length} pegawai
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => setSelectedFilter(null)}
+                        className="p-2 hover:bg-zinc-200 rounded-full transition-colors text-zinc-400 hover:text-zinc-600"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-zinc-50/50 border-b border-zinc-100">
+                            <th className="px-6 py-3 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Nama</th>
+                            <th className="px-6 py-3 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">NIP</th>
+                            <th className="px-6 py-3 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Jabatan</th>
+                            <th className="px-6 py-3 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Unit</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-50">
+                          {employees
+                            .filter(e => selectedFilter.type === 'unit' ? e.unit === selectedFilter.value : e.rank === selectedFilter.value)
+                            .map(emp => (
+                              <tr key={emp.id} className="hover:bg-zinc-50 transition-colors">
+                                <td className="px-6 py-3">
+                                  <p className="text-sm font-medium text-zinc-900">{emp.name}</p>
+                                </td>
+                                <td className="px-6 py-3 text-xs text-zinc-500 font-mono">{emp.nip}</td>
+                                <td className="px-6 py-3 text-xs text-zinc-500">{emp.position}</td>
+                                <td className="px-6 py-3">
+                                  <span className="px-2 py-0.5 bg-zinc-100 text-zinc-600 rounded text-[9px] font-bold uppercase">
+                                    {emp.unit}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
@@ -610,10 +691,9 @@ export default function App() {
                             >
                               <option value="">Pilih Unit Kerja</option>
                               <option value="Sekretariat">Sekretariat</option>
-                              <option value="Bidang Ideologi">Bidang Ideologi</option>
-                              <option value="Bidang Politik">Bidang Politik</option>
-                              <option value="Bidang Ketahanan Ekonomi">Bidang Ketahanan Ekonomi</option>
-                              <option value="Bidang Kewaspadaan Nasional">Bidang Kewaspadaan Nasional</option>
+                              <option value="Bidang Wasnan">Bidang Wasnan</option>
+                              <option value="Bidang Wasbang">Bidang Wasbang</option>
+                              <option value="Bidang Poldagri">Bidang Poldagri</option>
                             </select>
                           </div>
                           <div className="space-y-2">
