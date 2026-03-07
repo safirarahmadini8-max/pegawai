@@ -753,24 +753,40 @@ export default function App() {
                                   )}
                                 </div>
                               </div>
-                              <label className={cn(
-                                "cursor-pointer bg-white px-4 py-2 border border-zinc-200 rounded-lg text-xs font-bold text-zinc-600 hover:bg-zinc-50 transition-colors flex items-center gap-2",
-                                isUploading === doc.field && "opacity-50 cursor-wait"
-                              )}>
-                                {isUploading === doc.field ? (
-                                  <div className="w-3 h-3 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
-                                ) : (
-                                  <Upload size={14} />
+                              <div className="flex items-center gap-2">
+                                {editingEmployee?.[doc.field as keyof Employee] && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (confirm(`Hapus dokumen ${doc.label}?`)) {
+                                        setEditingEmployee(prev => prev ? { ...prev, [doc.field]: null } : null);
+                                      }
+                                    }}
+                                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Hapus Dokumen"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
                                 )}
-                                {isUploading === doc.field ? 'Mengunggah...' : (editingEmployee?.[doc.field as keyof Employee] ? 'Ganti' : 'Pilih File')}
-                                <input 
-                                  type="file" 
-                                  className="hidden" 
-                                  accept=".pdf,image/*"
-                                  disabled={isUploading !== null}
-                                  onChange={(e) => handleFileUpload(e, doc.field as keyof Employee)}
-                                />
-                              </label>
+                                <label className={cn(
+                                  "cursor-pointer bg-white px-4 py-2 border border-zinc-200 rounded-lg text-xs font-bold text-zinc-600 hover:bg-zinc-50 transition-colors flex items-center gap-2",
+                                  isUploading === doc.field && "opacity-50 cursor-wait"
+                                )}>
+                                  {isUploading === doc.field ? (
+                                    <div className="w-3 h-3 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
+                                  ) : (
+                                    <Upload size={14} />
+                                  )}
+                                  {isUploading === doc.field ? 'Mengunggah...' : (editingEmployee?.[doc.field as keyof Employee] ? 'Ganti' : 'Pilih File')}
+                                  <input 
+                                    type="file" 
+                                    className="hidden" 
+                                    accept=".pdf,image/*"
+                                    disabled={isUploading !== null}
+                                    onChange={(e) => handleFileUpload(e, doc.field as keyof Employee)}
+                                  />
+                                </label>
+                              </div>
                             </div>
                           ))}
                         </div>
